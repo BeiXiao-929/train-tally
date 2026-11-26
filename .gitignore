@@ -1,0 +1,64 @@
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*.pyc
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# ---------- 虚拟环境 ----------
+.venv/
+venv/
+env/
+ENV/
+
+# ---------- IDE / OS ----------
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ---------- 结果中间文件（只提交 results/*.csv 与 results/*.png）----------
+results/*.tmp
+results/*.raw
+results/*.json
+results/**/*.tmp
+
+# ---------- profiler 原始报告（体积大且含机器指纹，不入库）----------
+*.nsys-rep
+*.ncu-rep
+*.qdrep
+*.sqlite
+*.sqlite3
+*.trace.json
+traces/
+profiling/raw/
+
+# ---------- 日志 ----------
+*.log
+logs/
+nohup.out
+
+# ---------- 模型权重 / 数据集 / checkpoint ----------
+models/
+checkpoints/
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.gguf
+*.onnx
+data/
+datasets/
+
+# ---------- CUDA / 编译产物 ----------
+build/
+*.o
+*.obj
+*.so
+*.a
+*.lib
+*.cubin

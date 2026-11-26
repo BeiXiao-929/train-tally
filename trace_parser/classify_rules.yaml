@@ -1,0 +1,31 @@
+# Trace 分类规则（外置配置，换框架只改这里不改代码）
+#
+# 语义：按顺序匹配，**先匹配到的生效**。所以 nccl 必须排在 compute 之前，
+# 否则所有 ncclKernel 都会被兜底的 compute 吃掉。
+#
+# 校准方法（换框架/换 torch 版本后必做）：
+#   1. 跑一次 trace，用 `python -m trace_parser.parse_torch_profiler --trace ...`
+#   2. 看输出的 "other" 类占比；>2% 说明有 kernel 没被规则覆盖
+#   3. 把新 kernel 名前缀加进对应规则的 pattern，重跑直到 other < 1%
+#
+# 注意：pattern 是正则，大小写不敏感（代码里已加 IGNORECASE）。
+
+rules:
+  # ---- 通信：必须放在最前 ----
+  - label: nccl_allreduce
+    pattern: "nccl.*all_?reduce|allreduce"
+  - label: nccl_reducescatter
+    pattern: "nccl.*reduce_?scatter|reducescatter"
+  - label: nccl_allgather
+    pattern: "nccl.*all_?gather|allgather"
+  - label: nccl_other
+    pattern: "nccl|alltoall|broadcast|sendrecv"
+
+  # ---- 数据搬运 ----
+  - label: memcpy
+    pattern: "memcpy|memset|Memcpy"
+
+  # ---- 兜底：其余都算计算 ----
+  # 注意：这一条必须留在最后，且 pattern 必须能匹配任何字符串
+  - label: compute
+    pattern: "."

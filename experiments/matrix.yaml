@@ -1,0 +1,112 @@
+# =============================================================================
+# experiments/matrix.yaml —— 实验矩阵（唯一事实来源）
+#
+# 为什么用 YAML 而不是写在脚本参数里：
+# 1. 40 卡时的预算是硬约束，矩阵必须能一眼算出总卡时
+# 2. 每个实验都要过七条「跑通判据」，判据与配置必须一起版本化
+# 3. 复现时只改这里，不改代码
+#
+# 卡时估算 = world_size × (steps × step_ms_预估 / 1000) / 3600
+#           + 调试余量（默认 ×1.5，调试与重跑都算钱）
+# =============================================================================
+
+meta:
+  hardware: "4 x A100 40GB"
+  total_budget_gpu_hours: 40
+  guardrail: "单次实验超过预估两倍立即停止并排查，不允许边跑边试"
+
+# 七条跑通判据：全部通过才允许进入下一组实验（缺一条都不算跑通）
+criteria:
+  - id: C1
+    desc: "loss 曲线与单卡基线在前 200 步相对偏差 < 1e-3，且不随步数发散"
+    check: "results/ddp_*.csv 的 loss_first/loss_last 与单卡基线比"
+  - id: C2
+    desc: "第 1 步与第 100 步的 grad_norm 与单卡基线偏差 < 1e-2"
+    check: "grad_norm_last 列"
+  - id: C3
+    desc: "max_memory_allocated 与理论账本误差 < 10%"
+    check: "error_pct 列（memory_ledger 预测 vs 实测）"
+  - id: C4
+    desc: "单卡吞吐随卡数增长次线性，且拐点可被通信量解释"
+    check: "tokens_per_s_global / world_size 随 world_size 递减"
+  - id: C5
+    desc: "NCCL 通信字节数与理论通信量同量级（误差 < 20%）"
+    check: "trace_parser.parse_nccl 与 comm_ledger 对账"
+  - id: C6
+    desc: "checkpoint 保存后重新加载，loss 从断点连续，无跳变"
+    check: "手工执行（本期未自动化，TODO）"
+  - id: C7
+    desc: "全程无 NaN、无 OOM，profiler 能完整导出无截断"
+    check: "运行日志 + traces/ 目录"
+
+experiments:
+  # ---------------- A: DDP 基线 ----------------
+  - id: A
+    name: ddp_baseline
+    script: experiments.run_ddp
+    world_size: 4
+    args: { model: tiny-1b, steps: 200, batch: 1, seq: 2048, dtype: bf16 }
+    purpose: "建立通信基线：AllReduce 与反向计算的重叠程度"
+    key_metrics: [step_ms_median, tokens_per_s_global, peak_mem_gb, grad_norm_last]
+    budget_gpu_hours: 6
+    status: __FILL__
+
+  # ---------------- B: FSDP2 全分片 ----------------
+  - id: B
+    name: fsdp2_full_shard
+    script: experiments.run_fsdp2
+    world_size: 4
+    args: { model: tiny-1b, steps: 200, batch: 1, seq: 2048, dtype: bf16 }
+    purpose: "观察参数分片带来的 AllGather/ReduceScatter 通信增量"
+    key_metrics: [peak_mem_gb, step_ms_median, error_pct]
+    budget_gpu_hours: 6
+    status: __FILL__
+
+  # ---------------- C: ZeRO-1/2/3 权衡曲线 ----------------
+  - id: C1
+    name: zero_stage1
+    script: experiments.run_zero
+    world_size: 4
+    args: { model: tiny-1b, steps: 200, batch: 1, seq: 2048, dtype: bf16, stages: "1" }
+    purpose: "只切优化器状态的显存收益"
+    budget_gpu_hours: 2
+    status: __FILL__
+  - id: C2
+    name: zero_stage2
+    script: experiments.run_zero
+    world_size: 4
+    args: { model: tiny-1b, steps: 200, batch: 1, seq: 2048, dtype: bf16, stages: "2" }
+    purpose: "再切梯度后的边际收益"
+    budget_gpu_hours: 2
+    status: __FILL__
+  - id: C3
+    name: zero_stage3
+    script: experiments.run_zero
+    world_size: 4
+    args: { model: tiny-1b, steps: 200, batch: 1, seq: 2048, dtype: bf16, stages: "3" }
+    purpose: "全分片的显存下限与通信上限"
+    budget_gpu_hours: 2
+    status: __FILL__
+
+  # ---------------- D: TP × DP ----------------
+  - id: D1
+    name: tp2_dp2
+    script: experiments.run_tp_dp
+    world_size: 4
+    args: { model: tiny-1b, steps: 200, batch: 1, seq: 2048, dtype: bf16, tp: 2, dp: 2 }
+    purpose: "TP 的通信特征：112 次小消息对延迟的敏感性"
+    key_metrics: [step_ms_median, tp_msgs, tp_msg_kb, pred_comm_ratio]
+    budget_gpu_hours: 6
+    status: __FILL__
+  - id: D2
+    name: tp4_dp1
+    script: experiments.run_tp_dp
+    world_size: 4
+    args: { model: tiny-1b, steps: 200, batch: 1, seq: 2048, dtype: bf16, tp: 4, dp: 1 }
+    purpose: "TP=4 是否进入负收益区（PCIe 上预期是）"
+    budget_gpu_hours: 6
+    status: __FILL__
+
+# 预算分配（设计文档 7.6）：A/B/C 各 6 卡时，D 12 卡时，留 10 卡时给失败重跑
+# 本矩阵给出的是「每项上限」，实际在 matrix 执行时逐项回填 status:
+#   pending / running / passed(C1-C7 全过) / failed(附原因)

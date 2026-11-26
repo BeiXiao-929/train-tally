@@ -1,0 +1,29 @@
+# =============================================================================
+# dist-mfu-profiler 依赖锁定
+#
+# 关键约束：
+#   - FSDP2（fully_shard）自 torch 2.4 起可用，2.5 才稳定；本仓库锁 2.4.1，
+#     若要用 FSDP2 的 MixedPrecisionPolicy 细节建议 2.5.x（见 README 的版本说明）
+#   - 不引入 deepspeed：ZeRO-1/2/3 用 torch 原生能力近似，理由见 docs/technical_report.md
+#
+# 安装（CUDA 12.1）：
+#   pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cu121
+# =============================================================================
+
+# ---- 核心 ----
+torch==2.4.1
+numpy==1.26.4
+pyyaml==6.0.2
+
+# ---- 分析 / 出图 ----
+pandas==2.2.3
+matplotlib==3.9.2
+
+# ---- 工具 ----
+pytest==8.3.3
+psutil==6.0.0
+nvidia-ml-py==12.560.30
+tqdm==4.66.5
+
+# 说明：NCCL 随 torch 内置（torch 2.4.1 对应 NCCL 2.20.x），
+# 用 `python -c "import torch;print(torch.cuda.nccl.version())"` 确认实际版本。

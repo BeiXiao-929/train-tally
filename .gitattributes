@@ -1,0 +1,10 @@
+# 换行统一为 LF：仓库里有 Makefile，CRLF 会让 make/bash 直接报错
+* text=auto eol=lf
+
+# 二进制
+*.png binary
+*.jpg binary
+
+Makefile text eol=lf
+*.sh text eol=lf
+*.yaml text eol=lf
