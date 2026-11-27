@@ -21,7 +21,7 @@ TODO
 ----
 [ ] 增加 MoE 配置（专家并行会让通信账本多一条 all2all）
 [ ] 增加 MLA（DeepSeek）配置，KV 缓存公式不同
-[ ] 增加 `--from-hf-config` 直接读 config.json，避免手抄出错
+[x] 增加 `ModelConfig.from_hf_config()` 直接读 config.json，避免手抄出错
 
 验收标准
 --------
@@ -31,7 +31,9 @@ TODO
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Dict, List, Optional
 
 
@@ -91,6 +93,26 @@ class ModelConfig:
     def kv_bytes_per_token(self, dtype_bytes: int = 2) -> int:
         """每 token 每层的 KV 字节数 × 层数（不含 batch 与 seq）。"""
         return 2 * self.n_layers * self.kv_dim * dtype_bytes
+
+    @classmethod
+    def from_hf_config(cls, path: str | Path, name: Optional[str] = None) -> "ModelConfig":
+        """直接从 HuggingFace config.json 构造 ModelConfig，避免手抄超参出错。"""
+        p = Path(path)
+        raw = json.loads(p.read_text(encoding="utf-8"))
+        n_heads = int(raw["num_attention_heads"])
+        hidden = int(raw["hidden_size"])
+        head_dim = int(raw.get("head_dim") or (hidden // n_heads))
+        return cls(
+            name=name or str(raw.get("_name_or_path") or p.parent.name or "hf-model"),
+            n_layers=int(raw["num_hidden_layers"]),
+            hidden=hidden,
+            ffn=int(raw["intermediate_size"]),
+            vocab=int(raw["vocab_size"]),
+            n_heads=n_heads,
+            n_kv_heads=int(raw.get("num_key_value_heads", n_heads)),
+            head_dim=head_dim,
+            tie_embeddings=bool(raw.get("tie_word_embeddings", False)),
+        )
 
 
 @dataclass

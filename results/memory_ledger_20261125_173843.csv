@@ -1,0 +1,7 @@
+# gpu_count=1; gpu=NVIDIA GeForce RTX 4060 Laptop GPU; driver=621.01; cuda=12.1; torch=2.4.1; nccl=2.20.5; interconnect=unknown; clock_sm_mhz=1890; seed=1234; world_size_env=1; cuda_visible_devices=all; host=local; collected_at=2026-11-25T17:38:43; module=ledger.memory_ledger; model=qwen2.5-7b; fragmentation=1.05
+# meta attn_impl=flash; ac=False
+model,zero_stage,dp,tp,pp,batch,seq,dtype,activation_ckpt,params_gb,grads_gb,optimizer_gb,activations_gb,total_gb
+Qwen2.5-7B-Instruct,DDP,4,1,1,1,2048,bf16,False,14.185,14.185,85.11,7.328,126.848
+Qwen2.5-7B-Instruct,1,4,1,1,1,2048,bf16,False,14.185,14.185,21.277,7.328,59.824
+Qwen2.5-7B-Instruct,2,4,1,1,1,2048,bf16,False,14.185,3.546,21.277,7.328,48.654
+Qwen2.5-7B-Instruct,3,4,1,1,1,2048,bf16,False,3.546,3.546,21.277,7.328,37.483

@@ -87,5 +87,5 @@ def write_markdown(path: str | Path, title: str, rows: List[Dict[str, Any]],
         lines.append("|" + "|".join(["---"] * len(cols)) + "|")
         for r in rows:
             lines.append("| " + " | ".join(str(r.get(c, FILL)) for c in cols) + " |")
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    path.write_bytes(("\n".join(lines) + "\n").encode("utf-8"))
     return path

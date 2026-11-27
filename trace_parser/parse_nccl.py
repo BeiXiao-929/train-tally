@@ -131,6 +131,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description="量化 NCCL 通信占比与重叠率")
     ap.add_argument("--kern-sum", default="profiling/raw/kern_sum.csv")
     ap.add_argument("--trace", default="profiling/raw/gpu_trace.csv")
+    ap.add_argument("--expected-mb", type=float, default=None,
+                    help="可选：comm_ledger 理论通信量 MB，用于近似反推 B_eff（注明非实测字节）")
     ap.add_argument("--out", default="results")
     args = ap.parse_args(argv)
 
@@ -152,11 +154,19 @@ def main(argv: Optional[List[str]] = None) -> int:
         rows["nccl_busy_ms"] = round(comm * 1e3, 3)
         rows["compute_busy_ms"] = round(total_len(comp_iv) * 1e3, 3)
         rows["nccl_bytes"] = io.FILL   # nsys 不提供字节数，见文件头的说明
+        if args.expected_mb and comm > 0:
+            rows["eff_bw_gbps"] = round(args.expected_mb * 1e6 / comm / 1e9, 2)
+            rows["eff_bw_source"] = "approx_from_comm_ledger"
+        else:
+            rows["eff_bw_gbps"] = io.FILL
+            rows["eff_bw_source"] = io.FILL
     else:
         rows["overlap_ratio"] = io.FILL
         rows["nccl_busy_ms"] = io.FILL
         rows["compute_busy_ms"] = io.FILL
         rows["nccl_bytes"] = io.FILL
+        rows["eff_bw_gbps"] = io.FILL
+        rows["eff_bw_source"] = io.FILL
         print(f"[WARN] 找不到 {trace_path}：只输出占比，重叠率写 __FILL__", file=sys.stderr)
 
     env = {"source": kern_path.name, "trace": trace_path.name if trace_path.exists() else "none"}

@@ -96,7 +96,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     out = io.write_csv(io.result_path("trace_summary", args.out), res["rows"], env,
                        extra_meta=res["totals"])
     md = Path(args.out) / (out.stem + ".md")
-    md.write_text(to_markdown(res, env), encoding="utf-8")
+    md.write_bytes(to_markdown(res, env).encode("utf-8"))
     print(to_markdown(res, env))
     print(f"写出 {out}\n写出 {md}")
     return 0

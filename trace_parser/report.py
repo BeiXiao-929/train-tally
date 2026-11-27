@@ -236,12 +236,44 @@ def self_test() -> int:
     return 1
 
 
+def summarize_csv_dir(csv_dir: str | Path) -> List[Dict[str, Any]]:
+    """汇总 results/ 下已有 trace_summary_*.csv 与 nccl_summary_*.csv 便于跨实验对照。"""
+    root = Path(csv_dir)
+    if not root.exists():
+        return []
+    rows: List[Dict[str, Any]] = []
+    for p in sorted(root.glob("trace_summary_*.csv")):
+        meta, _ = io.read_csv(p)
+        rows.append({
+            "file": p.name,
+            "kind": "torch_profiler",
+            "source": meta.get("source", io.FILL),
+            "nccl_share_pct": meta.get("nccl_share_pct", io.FILL),
+            "overlap_ratio": meta.get("overlap_ratio", io.FILL),
+            "gpu_busy_pct": meta.get("gpu_busy_pct", io.FILL),
+            "eff_bw_gbps": io.FILL,
+        })
+    for p in sorted(root.glob("nccl_summary_*.csv")):
+        meta, data = io.read_csv(p)
+        r0 = data[0] if data else {}
+        rows.append({
+            "file": p.name,
+            "kind": "nsys_nccl",
+            "source": meta.get("source", io.FILL),
+            "nccl_share_pct": r0.get("nccl_share_pct", io.FILL),
+            "overlap_ratio": r0.get("overlap_ratio", io.FILL),
+            "gpu_busy_pct": io.FILL,
+            "eff_bw_gbps": r0.get("eff_bw_gbps", io.FILL),
+        })
+    return rows
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description="Trace 解析与汇报")
     ap.add_argument("--self-test", action="store_true")
     ap.add_argument("--trace", default="", help="chrome trace json")
     ap.add_argument("--rules", default="trace_parser/classify_rules.yaml")
-    ap.add_argument("--csv", default="", help="results 目录，汇总已有 CSV（占位实现）")
+    ap.add_argument("--csv", default="", help="results 目录，汇总已有 trace/nccl CSV")
     ap.add_argument("--out", default="results")
     args = ap.parse_args(argv)
 
@@ -263,14 +295,21 @@ def main(argv: Optional[List[str]] = None) -> int:
         out = io.write_csv(io.result_path("trace_summary", args.out),
                            res["rows"], env, extra_meta=res["totals"])
         md = Path(args.out) / (out.stem + ".md")
-        md.write_text(to_markdown(res, env), encoding="utf-8")
+        md.write_bytes(to_markdown(res, env).encode("utf-8"))
         print(to_markdown(res, env))
         print(f"写出 {out}\n写出 {md}")
         return 0
 
     if args.csv:
-        print("[INFO] --csv 汇总请用 `python -m trace_parser.report --trace ...` 逐份解析后合并；"
-              "当前先支持单份 trace。")
+        rows = summarize_csv_dir(args.csv)
+        if not rows:
+            print(f"[SKIP] {args.csv} 下没有 trace_summary_*.csv 或 nccl_summary_*.csv。")
+            return 0
+        env = {"source_dir": str(args.csv), "files": len(rows)}
+        out = io.write_csv(io.result_path("trace_report", args.out), rows, env)
+        md = io.write_markdown(Path(args.out) / (out.stem + ".md"),
+                               "Trace 多实验汇总", rows, env)
+        print(f"汇总 {len(rows)} 份 trace CSV → {out}\n写出 {md}")
         return 0
 
     ap.print_help()

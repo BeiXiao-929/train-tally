@@ -13,12 +13,22 @@
 """
 from __future__ import annotations
 
+import json
 import pytest
 
-from ledger.comm_ledger import dp_bytes, ledger as comm_ledger, tp_bytes
+from common import io
+from ledger.comm_ledger import (
+    dp_bytes,
+    infer_effective_bandwidth,
+    ledger as comm_ledger,
+    solve_break_even_bw,
+    tp_break_even,
+    tp_bytes,
+)
 from ledger.memory_ledger import total_gb
 from ledger.mfu_ledger import measured_mfu, theoretical_mfu_upper_bound
-from ledger.model_configs import ParallelConfig, get as get_model
+from ledger.model_configs import ModelConfig, ParallelConfig, get as get_model
+from trace_parser.report import summarize_csv_dir
 
 
 def test_param_count_matches_published():
@@ -87,3 +97,57 @@ def test_mfu_upper_bound_and_measurement():
     # 4 卡 × 4000 tok/s 的假设值仅用于检查「实测不得超上界」这条不变式
     meas = measured_mfu(m, tokens_per_s=4000.0, n_gpus=4)
     assert meas <= ub + 1e-6, f"实测 MFU {meas:.3f} 超过上界 {ub:.3f}，统计有误"
+
+
+def test_tp_break_even_and_critical_bw():
+    m = get_model("qwen2.5-7b")
+    crit = solve_break_even_bw(m, tp=2, latency_us=10.0, gpu="a100", batch=1, seq=2048)
+    assert 10.5 <= crit <= 11.5, f"预期 TP=2 临界带宽约 11.0 GB/s，实际 {crit}"
+
+    pcie_measured = tp_break_even(m, b_eff_gbps=8.0, tp_values=(2, 4))
+    assert all(not r["profitable"] and r["net_gain_pct"] < 0 for r in pcie_measured)
+
+    pcie_theory = tp_break_even(m, b_eff_gbps=25.0, tp_values=(2, 4))
+    assert all(r["profitable"] and r["net_gain_pct"] > 0 for r in pcie_theory)
+
+
+def test_comm_overlap_and_infer_bw():
+    m = get_model("qwen2.5-7b")
+    pc = ParallelConfig(dp=4, zero_stage=0, batch=1, seq=2048)
+    no_ov = comm_ledger(m, pc, link="pcie4", overlap=0.0)
+    half_ov = comm_ledger(m, pc, link="pcie4", overlap=0.5)
+    assert half_ov["exposed_comm_ms"] == pytest.approx(no_ov["comm_ms"] * 0.5, rel=1e-3)
+    assert half_ov["comm_ratio"] < no_ov["comm_ratio"]
+
+    b_eff = infer_effective_bandwidth(total_bytes=1e9, comm_ms=100.0)
+    assert b_eff == pytest.approx(10.0, rel=1e-6)
+
+
+def test_from_hf_config(tmp_path):
+    cfg = tmp_path / "config.json"
+    cfg.write_text(json.dumps({
+        "num_hidden_layers": 28,
+        "hidden_size": 1024,
+        "intermediate_size": 3072,
+        "vocab_size": 151936,
+        "num_attention_heads": 16,
+        "num_key_value_heads": 8,
+        "head_dim": 128,
+        "tie_word_embeddings": True,
+    }), encoding="utf-8")
+    m = ModelConfig.from_hf_config(cfg, name="test-qwen3")
+    assert m.name == "test-qwen3"
+    assert m.n_kv_heads == 8 and m.head_dim == 128
+    assert 0.5 < m.total_params() < 0.8
+
+
+def test_summarize_csv_dir(tmp_path):
+    io.write_csv(
+        tmp_path / "nccl_summary_20261127_000000.csv",
+        [{"nccl_share_pct": 25.0, "overlap_ratio": 0.4, "eff_bw_gbps": 12.5}],
+        {"source": "run1"},
+    )
+    rows = summarize_csv_dir(tmp_path)
+    assert len(rows) == 1
+    assert rows[0]["kind"] == "nsys_nccl"
+    assert float(rows[0]["eff_bw_gbps"]) == pytest.approx(12.5)

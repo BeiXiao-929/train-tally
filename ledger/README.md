@@ -45,7 +45,7 @@ pytest ledger -q
 | DP AllReduce | `2P(N-1)/N` | 单次大消息，带宽敏感 |
 | ZeRO-1/2 | `2P(N-1)/N`（RS+AG 两次） | 字节同 DDP，但两次集合通信、延迟翻倍 |
 | ZeRO-3/FSDP | `3P(N-1)/N` | 前向+反向各一次 AllGather，再 ReduceScatter |
-| TP | `4L × b·s·h × bytes × (t-1)/t` | **次数多、单次小，延迟敏感** |
+| TP | `4L × 2·b·s·h × bytes × (t-1)/t` | **次数多、单次小，延迟敏感** |
 | PP | `2 × b·s·h × bytes × (p-1)` | 点对点，bubble 另算 |
 
 TP 那一行的「4L」是关键：7B/28 层 → 112 次/步，单次只有 `b·s·h·2` 字节。
