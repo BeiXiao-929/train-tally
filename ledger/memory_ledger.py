@@ -156,6 +156,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--ac", action="store_true", help="开启激活重计算")
     ap.add_argument("--attn-impl", default="flash", choices=["flash", "eager"])
     ap.add_argument("--fragmentation", type=float, default=1.05)
+    ap.add_argument("--gpu", default="a100",
+                    help="目标卡型（仅作元数据；显存账本不依赖峰值算力）")
     ap.add_argument("--measured-csv", default="", help="含 measured_gb 列的实测 CSV，用于算误差")
     ap.add_argument("--out", default="results")
     args = ap.parse_args(argv)
@@ -188,6 +190,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     env = collect(extra={"module": "ledger.memory_ledger",
                          "model": args.model,
+                         "gpu_target": args.gpu,
                          "fragmentation": args.fragmentation})
     out = io.write_csv(io.result_path("memory_ledger", args.out), rows, env,
                        extra_meta={"attn_impl": args.attn_impl,
