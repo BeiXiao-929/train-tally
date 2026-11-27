@@ -1,4 +1,4 @@
-# dist-mfu-profiler
+# TrainTally 训练统计：分布式训练通信与显存建模
 
 **面向 4×A100 的 DDP / FSDP2 / ZeRO-1·2·3 / TP×DP 实验设计，配一套「理论账本 +
 trace 解析」，把「显存去哪了、通信占多少、MFU 为什么上不去」从感觉变成数据，
