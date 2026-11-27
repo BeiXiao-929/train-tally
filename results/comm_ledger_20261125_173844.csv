@@ -1,4 +1,4 @@
-# gpu_count=1; gpu=a100; driver=621.01; cuda=12.1; torch=2.4.1; nccl=2.20.5; interconnect=unknown; clock_sm_mhz=1890; seed=1234; world_size_env=1; cuda_visible_devices=all; host=local; collected_at=2026-11-25T17:38:44; module=ledger.comm_ledger; model=qwen2.5-7b; link=pcie4
+# gpu_count=1; gpu=NVIDIA GeForce RTX 4060 Laptop GPU; gpu_target=a100; driver=621.01; cuda=12.1; torch=2.4.1; nccl=2.20.5; interconnect=unknown; clock_sm_mhz=1890; seed=1234; world_size_env=1; cuda_visible_devices=all; host=local; collected_at=2026-11-25T17:38:44; module=ledger.comm_ledger; model=qwen2.5-7b; link=pcie4
 # meta batch=1; seq=2048
 model,config,zero_stage,dp,tp,pp,link,bw_gbps,latency_us,dp_mb,tp_mb,pp_mb,total_mb,messages,comm_ms,compute_ms,comm_ratio,tp_msg_kb
 Qwen2.5-7B-Instruct,DDP dp4×tp1×pp1 b1s2048,DDP,4,1,1,pcie4,25.0,10.0,22846.46,0.0,0.0,22846.46,1,913.8685,299.933,0.7529,0.0

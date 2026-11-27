@@ -84,6 +84,10 @@ make run-all        # 等价于 bash tools/run_all.sh
 > **③ 优化器状态是最大头**（85.1 GB = 67%），这解释了为什么 ZeRO-1 一步就砍掉一半。
 >
 > 「实测」列待 4 卡跑完后回填（`experiments/run_zero.py` 会输出 `peak_mem_gb` 与 `error_pct`）。
+>
+> **读 `results/*.csv` 的元数据时注意两个字段**：`gpu=` 是**采集这张表的机器**（RTX 4060 Laptop，
+> 账本是纯 CPU 计算），`gpu_target=` 是**账本假设的目标卡**（`a100`，只用来取峰值算力与链路参数）。
+> 两者混看会把「在笔记本上算出来的 A100 账本」误读成「在 A100 上实测」。
 
 ### 2. 吞吐与 MFU
 

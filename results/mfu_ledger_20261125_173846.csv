@@ -1,4 +1,4 @@
-# gpu_count=1; gpu=a100; driver=621.01; cuda=12.1; torch=2.4.1; nccl=2.20.5; interconnect=unknown; clock_sm_mhz=1890; seed=1234; world_size_env=1; cuda_visible_devices=all; host=local; collected_at=2026-11-25T17:38:46; module=ledger.mfu_ledger; model=qwen2.5-7b; link=nvlink
+# gpu_count=1; gpu=NVIDIA GeForce RTX 4060 Laptop GPU; gpu_target=a100; driver=621.01; cuda=12.1; torch=2.4.1; nccl=2.20.5; interconnect=unknown; clock_sm_mhz=1890; seed=1234; world_size_env=1; cuda_visible_devices=all; host=local; collected_at=2026-11-25T17:38:46; module=ledger.mfu_ledger; model=qwen2.5-7b; link=nvlink
 model,config,gpu,link,comm_ratio,upper_bound_mfu,measured_tokens_per_s,measured_mfu,gap_pp,gap_from_comm_pp,gap_other_pp
 Qwen2.5-7B-Instruct,DDP dp4×tp1×pp1 b1s2048,a100,nvlink,0.2025,0.7975,__FILL__,__FILL__,__FILL__,__FILL__,__FILL__
 Qwen2.5-7B-Instruct,ZeRO-3 dp4×tp1×pp1 b1s2048,a100,nvlink,0.2758,0.7242,__FILL__,__FILL__,__FILL__,__FILL__,__FILL__

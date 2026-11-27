@@ -135,7 +135,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     rows = rows_for(model, pcs, args.link, args.gpu, args.measured_csv)
 
     env = collect(extra={"module": "ledger.mfu_ledger", "model": args.model,
-                         "link": args.link, "gpu": args.gpu})
+                         "link": args.link, "gpu_target": args.gpu})
     out = io.write_csv(io.result_path("mfu_ledger", args.out), rows, env)
     print(f"模型 {model.name}  GPU={args.gpu}  链路={args.link}")
     print(f"{'config':<28}{'comm ratio':>12}{'UB MFU':>9}   {'meas MFU':>9} {'gap pp':>7}")

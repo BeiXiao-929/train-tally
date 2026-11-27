@@ -299,7 +299,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             for pc in pcs]
 
     env = collect(extra={"module": "ledger.comm_ledger", "model": args.model,
-                         "link": args.link, "gpu": args.gpu})
+                         "link": args.link, "gpu_target": args.gpu})
     out = io.write_csv(io.result_path("comm_ledger", args.out), rows, env,
                        extra_meta={"batch": args.batch, "seq": args.seq,
                                    "overlap": args.overlap})
